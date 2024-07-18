@@ -11,12 +11,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@2
         with:
-          python-version: '3.11.2'  # Change this to match your Python version
+          python-version: '3.9'  # Change this to match your Python version
 
       - name: Install dependencies
         run: |
