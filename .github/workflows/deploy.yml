@@ -26,7 +26,7 @@ jobs:
 
       - name: Deploy to Heroku
         env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          HEROKU_API_KEY: HRKU-db66bdca-930e-4aeb-9ee7-13258c604bb4
         run: |
           heroku git:remote -a cyberbullying-backend
           git push heroku main
