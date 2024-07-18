@@ -29,5 +29,5 @@ jobs:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
           wget -qO- https://toolbelt.heroku.com/install.sh | sh
-          heroku git:remote -a cyberbullying-detection-backend
+          heroku git:remote -a cyberbullying-detection-server
           git push heroku main
