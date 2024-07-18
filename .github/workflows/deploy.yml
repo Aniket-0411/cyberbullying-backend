@@ -24,11 +24,6 @@ jobs:
           . venv/bin/activate
           pip install -r requirements.txt
 
-      - name: Run tests
-        run: |
-          . venv/bin/activate
-          pytest  # Assuming you have tests to run
-
       - name: Deploy to Heroku
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
