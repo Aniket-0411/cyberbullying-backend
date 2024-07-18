@@ -1,22 +1,22 @@
-name: Flask CI/CD
+name: Deploy to Vercel
 
 on:
   push:
     branches:
-      - main
+      - main  # or the branch you want to deploy
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v2
         with:
-          python-version: '3.11.2'
+          python-version: '3.9'  # Change this to match your Python version
 
       - name: Install dependencies
         run: |
@@ -24,10 +24,14 @@ jobs:
           . venv/bin/activate
           pip install -r requirements.txt
 
-      - name: Deploy to Heroku
-        env:
-          HEROKU_API_KEY: HRKU-db66bdca-930e-4aeb-9ee7-13258c604bb4
+      - name: Build project
         run: |
-          wget -qO- https://toolbelt.heroku.com/install.sh | sh
-          heroku git:remote -a cyberbullying-backend
-          git push heroku main
+          . venv/bin/activate
+          # Add any build steps if necessary
+
+      - name: Deploy to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          npm install -g vercel
+          vercel --prod --token=$VERCEL_TOKEN --confirm
