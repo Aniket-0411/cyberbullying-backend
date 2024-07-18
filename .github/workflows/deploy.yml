@@ -28,5 +28,6 @@ jobs:
         env:
           HEROKU_API_KEY: HRKU-db66bdca-930e-4aeb-9ee7-13258c604bb4
         run: |
+          wget -qO- https://toolbelt.heroku.com/install.sh | sh
           heroku git:remote -a cyberbullying-backend
           git push heroku main
