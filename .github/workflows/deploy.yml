@@ -11,10 +11,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@2
+        uses: actions/setup-python@3
         with:
           python-version: '3.9'  # Change this to match your Python version
 
