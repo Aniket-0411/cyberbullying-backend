@@ -1,4 +1,6 @@
-torch torchvision torchaudio
+torch 
+torchvision 
+torchaudio
 Flask==3.0.3
 transformers==4.42.4
 boto3==1.34.144
