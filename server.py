@@ -1,8 +1,9 @@
 from flask import Flask, request, jsonify
 import boto3
-import torch
-from transformers import AutoTokenizer, pipeline
+import onnxruntime as ort
+from transformers import AutoTokenizer
 from dotenv import load_dotenv
+import numpy as np
 import os
 
 # Load environment variables from .env file
@@ -19,8 +20,9 @@ MODEL_KEY = os.getenv('MODEL_KEY')  # Replace with your model file key in S3
 def load_model_and_tokenizer():
     try:
         # Check if local file exists
-        if os.path.exists("./models/RobertaModel.pt"):
-            model_path = "./models/RobertaModel.pt"
+        if os.path.exists("RobertaModel.onnx"):
+            model_path = "RobertaModel.onnx"
+            print("Local path found")
         else:
             # Initialize S3 client
             s3 = boto3.client('s3', region_name=AWS_REGION,
@@ -28,17 +30,20 @@ def load_model_and_tokenizer():
                               aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
 
             # Download model from S3
-            with open("RobertaModel.pt", "wb") as f:
+            with open("RobertaModel.onnx", "wb") as f:
                 s3.download_fileobj(AWS_BUCKET_NAME, MODEL_KEY, f)
             
-            model_path = "RobertaModel.pt"
+            model_path = "RobertaModel.onnx"
+            print("Model found on cloud, downloading....")
 
-        # Load the model and tokenizer
-        saved_model = torch.load(model_path, map_location=torch.device('cpu'))
+        # Load the tokenizer
         tokenizer = AutoTokenizer.from_pretrained('roberta-base')
-        classifier = pipeline("text-classification", model=saved_model, tokenizer=tokenizer)
+
+        # Load the ONNX model
+        session = ort.InferenceSession(model_path)
+
         print("Model loaded successfully")
-        return classifier
+        return session, tokenizer
 
     except boto3.exceptions.S3UploadFailedError as e:
         print(f"Error downloading model from S3: {str(e)}")
@@ -47,7 +52,8 @@ def load_model_and_tokenizer():
         print(f"General error: {str(e)}")
         raise RuntimeError("An unexpected error occurred while loading the model") from e
 
-classifier = None
+session = None
+tokenizer = None
 
 @app.route('/')
 def index():
@@ -55,7 +61,7 @@ def index():
 
 @app.route('/test-model', methods=['POST'])
 def test_model():
-    global classifier
+    global session, tokenizer
 
     try:
         if request.method == 'POST':
@@ -65,9 +71,15 @@ def test_model():
             if not text:
                 raise ValueError('Empty or missing text field in request')
 
-            if classifier is None:
-                classifier = load_model_and_tokenizer()  # Load on first request
+            if session is None or tokenizer is None:
+                session, tokenizer = load_model_and_tokenizer()  # Load on first request
 
+            # Tokenize the input text
+            inputs = tokenizer(text, return_tensors="np", padding='max_length', truncation=True, max_length=6)
+            ort_inputs = {session.get_inputs()[0].name: inputs["input_ids"].astype(np.int64)}
+
+            ort_outputs = session.run(None, ort_inputs)
+            
             OP_label = {
                 'LABEL_0': 'Non Cyberbullying',
                 'LABEL_1': 'Age',
@@ -77,8 +89,8 @@ def test_model():
                 'LABEL_5': 'Other Cyberbullying'
             }
 
-            res = classifier(text)
-            label = OP_label[res[0]["label"]]
+            label_id = ort_outputs[0].argmax()
+            label = OP_label[f'LABEL_{label_id}']
             response_data = {'result': label}
 
             return jsonify(response_data)
