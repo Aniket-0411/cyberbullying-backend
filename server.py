@@ -19,22 +19,26 @@ MODEL_KEY = os.getenv('MODEL_KEY')  # Replace with your model file key in S3
 
 def load_model_and_tokenizer():
     try:
+        model_path = "RobertaModel.onnx"
+        
         # Check if local file exists
-        if os.path.exists("RobertaModel.onnx"):
-            model_path = "RobertaModel.onnx"
-            print("Local path found")
+        if os.path.exists(model_path):
+            print("Model found locally")
         else:
             # Initialize S3 client
             s3 = boto3.client('s3', region_name=AWS_REGION,
                               aws_access_key_id=AWS_ACCESS_KEY_ID,
                               aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+            print("Connected to S3, downloading model....")
 
             # Download model from S3
-            with open("RobertaModel.onnx", "wb") as f:
+            with open(model_path, "wb") as f:
                 s3.download_fileobj(AWS_BUCKET_NAME, MODEL_KEY, f)
-            
-            model_path = "RobertaModel.onnx"
-            print("Model found on cloud, downloading....")
+                
+            # Verify the file size to check if download was successful
+            file_size = os.path.getsize(model_path)
+            if file_size == 0:
+                raise RuntimeError("Downloaded model file is empty")
 
         # Load the tokenizer
         tokenizer = AutoTokenizer.from_pretrained('roberta-base')
@@ -51,6 +55,7 @@ def load_model_and_tokenizer():
     except Exception as e:
         print(f"General error: {str(e)}")
         raise RuntimeError("An unexpected error occurred while loading the model") from e
+
 
 session = None
 tokenizer = None
