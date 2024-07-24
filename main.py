@@ -5,9 +5,15 @@ from transformers import AutoTokenizer
 from dotenv import load_dotenv
 import numpy as np
 import os
+import logging
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
 
 # AWS S3 configuration
@@ -23,13 +29,13 @@ def load_model_and_tokenizer():
         
         # Check if local file exists
         if os.path.exists(model_path):
-            print("Model found locally")
+            logger.info("Model found locally")
         else:
             # Initialize S3 client
             s3 = boto3.client('s3', region_name=AWS_REGION,
                               aws_access_key_id=AWS_ACCESS_KEY_ID,
                               aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
-            print("Connected to S3, downloading model....")
+            logger.info("Connected to S3, downloading model....")
 
             # Download model from S3
             with open(model_path, "wb") as f:
@@ -46,16 +52,15 @@ def load_model_and_tokenizer():
         # Load the ONNX model
         session = ort.InferenceSession(model_path)
 
-        print("Model loaded successfully")
+        logger.info("Model loaded successfully")
         return session, tokenizer
 
     except boto3.exceptions.S3UploadFailedError as e:
-        print(f"Error downloading model from S3: {str(e)}")
+        logger.error(f"Error downloading model from S3: {str(e)}")
         raise RuntimeError("Error downloading model from S3") from e
     except Exception as e:
-        print(f"General error: {str(e)}")
+        logger.error(f"General error: {str(e)}")
         raise RuntimeError("An unexpected error occurred while loading the model") from e
-
 
 session = None
 tokenizer = None
@@ -101,17 +106,16 @@ def test_model():
             return jsonify(response_data)
 
     except ValueError as ve:
-        print(ve)
+        logger.warning(ve)
         return jsonify({'error': str(ve)}), 400
 
     except RuntimeError as re:
-        print(re)
+        logger.error(re)
         return jsonify({'error': str(re)}), 500
 
     except Exception as e:
-        print(e)
+        logger.error(e)
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
-
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080, debug=True)
+    app.run(debug=True)
